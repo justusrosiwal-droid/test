@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ARCADE // TERMINAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c10;--panel:#0d1117;--border:#1e3a2f;
+  --green:#00ff88;--green-dim:#00ff8833;--green-glow:#00ff8815;
+  --red:#ff3355;--red-dim:#ff335533;
+  --cyan:#00e5ff;--cyan-dim:#00e5ff33;
+  --yellow:#ffd700;--yellow-dim:#ffd70033;
+  --text:#c8ffd8;--muted:#3a6b50;--cell-bg:#0a1a12;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.012) 2px,rgba(0,255,136,.012) 4px);pointer-events:none;z-index:9999}
+
+/* ── API KEY SETUP ── */
+#api-setup{position:fixed;inset:0;background:rgba(8,12,16,.97);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+#api-setup.hidden{display:none}
+.setup-box{background:var(--panel);border:1px solid var(--green);padding:2rem;max-width:480px;width:100%;display:flex;flex-direction:column;gap:1rem;clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%)}
+.setup-title{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;letter-spacing:.2em;color:var(--green);text-shadow:0 0 12px var(--green-dim)}
+.setup-desc{font-size:.7rem;color:var(--muted);line-height:1.7}
+.setup-desc a{color:var(--cyan);text-decoration:none}
+.setup-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.78rem;padding:.7rem 1rem;outline:none;transition:border .2s;width:100%}
+.setup-input:focus{border-color:var(--green)}
+.setup-input::placeholder{color:var(--muted)}
+.setup-btn{padding:.7rem 1.5rem;font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;background:transparent;border:1px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)}
+.setup-btn:hover{background:var(--green);color:var(--bg)}
+.setup-err{font-size:.68rem;color:var(--red);min-height:1em}
+.setup-note{font-size:.62rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:.8rem}
+
+/* ── HUB ── */
+#hub{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;gap:2.5rem}
+.hub-title{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,7vw,4rem);font-weight:900;letter-spacing:.25em;color:var(--green);text-shadow:0 0 30px var(--green),0 0 60px var(--green-dim);text-align:center}
+.hub-sub{font-size:.7rem;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;text-align:center}
+.api-badge{font-size:.62rem;letter-spacing:.1em;padding:.3rem .8rem;border:1px solid var(--green-dim);color:var(--green);background:var(--green-glow);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.4rem}
+.api-badge:hover{border-color:var(--green)}
+.game-cards{display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;max-width:900px}
+.game-card{width:240px;background:var(--panel);border:1px solid var(--border);padding:2rem 1.5rem;cursor:pointer;transition:all .25s;position:relative;clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);text-align:center}
+.game-card:hover{border-color:var(--green);box-shadow:0 0 24px var(--green-dim);transform:translateY(-4px)}
+.game-card:hover .card-icon{text-shadow:0 0 20px var(--green)}
+.card-icon{font-size:3rem;margin-bottom:1rem;display:block;transition:text-shadow .25s}
+.card-title{font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:.15em;color:var(--green);margin-bottom:.5rem}
+.card-desc{font-size:.68rem;color:var(--muted);line-height:1.6}
+.card-tag{position:absolute;top:.6rem;right:.8rem;font-size:.55rem;letter-spacing:.1em;padding:.2rem .5rem;border-radius:2px}
+.tag-ai{background:var(--red-dim);color:var(--red);border:1px solid var(--red)}
+.tag-arcade{background:var(--green-dim);color:var(--green);border:1px solid var(--green)}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;flex-direction:column;align-items:center;padding:1.5rem 1rem;gap:1.2rem}
+.screen.active{display:flex}
+.back-btn{align-self:flex-start;background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.15em;padding:.4rem 1rem;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.back-btn:hover{border-color:var(--green);color:var(--green)}
+.screen-title{font-family:'Orbitron',sans-serif;font-size:clamp(1.2rem,4vw,2rem);font-weight:900;letter-spacing:.2em;color:var(--green);text-shadow:0 0 16px var(--green-dim);text-align:center}
+
+/* ═══ TIC TAC TOE ═══ */
+.ttt-scoreboard{display:flex;gap:1rem;align-items:center}
+.score-box{display:flex;flex-direction:column;align-items:center;padding:.7rem 1.3rem;border:1px solid var(--border);background:var(--panel);clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)}
+.score-box.p{border-color:var(--green);box-shadow:0 0 10px var(--green-dim)}
+.score-box.a{border-color:var(--red);box-shadow:0 0 10px var(--red-dim)}
+.score-label{font-size:.58rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+.score-num{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:700;line-height:1.1}
+.score-box.p .score-num{color:var(--green)}.score-box.a .score-num{color:var(--red)}
+.ttt-status{font-size:.8rem;letter-spacing:.1em;color:var(--cyan);text-align:center;min-height:1.2em;text-shadow:0 0 8px var(--cyan)}
+.ttt-status.win{color:var(--green);text-shadow:0 0 12px var(--green)}
+.ttt-status.lose{color:var(--red);text-shadow:0 0 12px var(--red)}
+.ttt-status.draw{color:var(--yellow);text-shadow:0 0 12px var(--yellow-dim)}
+.ttt-thinking{display:none;gap:4px;align-items:center;justify-content:center}
+.ttt-thinking.active{display:flex}
+.ttt-thinking span{width:5px;height:5px;background:var(--red);border-radius:50%;animation:blink .8s ease infinite}
+.ttt-thinking span:nth-child(2){animation-delay:.2s}.ttt-thinking span:nth-child(3){animation-delay:.4s}
+.ttt-board{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:var(--border);border:1px solid var(--border);box-shadow:0 0 24px var(--green-glow)}
+.ttt-cell{width:clamp(80px,20vw,110px);height:clamp(80px,20vw,110px);background:var(--cell-bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:clamp(1.8rem,6vw,2.8rem);font-weight:900;transition:background .15s;user-select:none}
+.ttt-cell:hover:not(.taken){background:#0f2018}
+.ttt-cell.taken{cursor:default}
+.ttt-cell.x{color:var(--green);text-shadow:0 0 14px var(--green);animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both}
+.ttt-cell.o{color:var(--red);text-shadow:0 0 14px var(--red);animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both}
+.ttt-cell.winning{animation:winPulse .8s ease infinite alternate}
+.diff-row{display:flex;gap:.5rem;align-items:center}
+.diff-label{font-size:.62rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+.diff-btn{padding:.3rem .8rem;font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.08em;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .2s;clip-path:polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%)}
+.diff-btn:hover,.diff-btn.active{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+.game-btns{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center}
+.gbtn{padding:.6rem 1.5rem;font-family:'Orbitron',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.12em;background:transparent;border:1px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)}
+.gbtn:hover{background:var(--green);color:var(--bg)}
+.gbtn.danger{border-color:var(--muted);color:var(--muted)}
+.gbtn.danger:hover{border-color:var(--red);color:var(--red);background:transparent}
+
+/* ═══ SNAKE ═══ */
+.snake-info{display:flex;gap:2rem;align-items:center}
+.snake-stat{text-align:center}
+.snake-stat-label{font-size:.6rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+.snake-stat-val{font-family:'Orbitron',sans-serif;font-size:1.4rem;color:var(--cyan);text-shadow:0 0 10px var(--cyan-dim)}
+#snake-canvas{border:1px solid var(--border);box-shadow:0 0 24px var(--cyan-dim);background:var(--cell-bg);display:block}
+.snake-status{font-size:.8rem;letter-spacing:.1em;color:var(--cyan);text-align:center;min-height:1.2em}
+.snake-controls{font-size:.65rem;color:var(--muted);text-align:center;letter-spacing:.08em}
+
+/* ═══ TURING TEST ═══ */
+.turing-wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:1rem}
+.turing-desc{font-size:.72rem;color:var(--muted);line-height:1.7;text-align:center;border:1px solid var(--border);padding:1rem;background:var(--panel)}
+.chat-window{width:100%;height:320px;background:var(--panel);border:1px solid var(--border);overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.7rem;box-shadow:inset 0 0 20px rgba(0,0,0,.4)}
+.chat-msg{max-width:80%;padding:.6rem .9rem;font-size:.78rem;line-height:1.6;position:relative;animation:popIn .2s ease both}
+.chat-msg.them{align-self:flex-start;background:#0f1e16;border:1px solid var(--border);border-radius:0 8px 8px 8px;color:var(--text)}
+.chat-msg.me{align-self:flex-end;background:#0a2218;border:1px solid var(--green-dim);border-radius:8px 0 8px 8px;color:var(--green)}
+.chat-msg .msg-label{font-size:.58rem;letter-spacing:.1em;color:var(--muted);margin-bottom:.25rem;text-transform:uppercase}
+.chat-input-row{display:flex;gap:.6rem}
+.chat-input{flex:1;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.78rem;padding:.6rem .9rem;outline:none;transition:border .2s}
+.chat-input:focus{border-color:var(--green)}
+.chat-input::placeholder{color:var(--muted)}
+.send-btn{padding:.6rem 1.2rem;font-family:'Orbitron',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;background:transparent;border:1px solid var(--green);color:var(--green);cursor:pointer;transition:all .2s}
+.send-btn:hover{background:var(--green);color:var(--bg)}
+.send-btn:disabled{border-color:var(--muted);color:var(--muted);cursor:not-allowed}
+.verdict-row{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap}
+.verdict-btn{padding:.7rem 1.6rem;font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;background:transparent;cursor:pointer;transition:all .2s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)}
+.verdict-btn.human{border:1px solid var(--cyan);color:var(--cyan)}
+.verdict-btn.human:hover{background:var(--cyan);color:var(--bg)}
+.verdict-btn.ai-v{border:1px solid var(--red);color:var(--red)}
+.verdict-btn.ai-v:hover{background:var(--red);color:var(--bg)}
+.verdict-btn:disabled{opacity:.4;cursor:not-allowed}
+.turing-score{display:flex;gap:1.5rem;justify-content:center}
+.turing-score-box{text-align:center;padding:.5rem 1.2rem;border:1px solid var(--border);background:var(--panel)}
+.turing-score-box .label{font-size:.6rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.turing-score-box .val{font-family:'Orbitron',sans-serif;font-size:1.4rem;color:var(--yellow);text-shadow:0 0 10px var(--yellow-dim)}
+.turing-result{font-size:.8rem;text-align:center;min-height:1.2em;letter-spacing:.08em}
+.typing-indicator{display:none;align-items:center;gap:4px;padding:.4rem .8rem;background:#0f1e16;border:1px solid var(--border);border-radius:0 8px 8px 8px;width:fit-content}
+.typing-indicator.active{display:flex}
+.typing-indicator span{width:5px;height:5px;background:var(--muted);border-radius:50%;animation:blink .8s ease infinite}
+.typing-indicator span:nth-child(2){animation-delay:.25s}.typing-indicator span:nth-child(3){animation-delay:.5s}
+.round-badge{font-size:.65rem;letter-spacing:.12em;color:var(--yellow);text-align:center;text-transform:uppercase}
+
+/* ── ANIMATIONS ── */
+@keyframes popIn{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes winPulse{from{filter:brightness(1)}to{filter:brightness(1.5)}}
+@keyframes blink{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+#hub{animation:fadeIn .5s ease both}
+</style>
+</head>
+<body>
+
+<!-- ═══ PROXY SETUP CHECK ═══ -->
+<div id="api-setup">
+  <div class="setup-box">
+    <div class="setup-title">⚡ ARCADE // TERMINAL</div>
+    <div class="setup-desc">
+      Connecting to game server...<br><br>
+      <span style="color:var(--green)">Cloudflare Worker proxy is configured.</span><br>
+      Click below to test the connection and start playing.
+    </div>
+    <div class="setup-err" id="setup-err"></div>
+    <button class="setup-btn" onclick="checkProxy()">CONNECT & PLAY →</button>
+    <div class="setup-note">
+      ⚠ The Turing Test game uses OpenAI's gpt-4o-mini. Each round costs fractions of a cent from your free OpenAI credits.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HUB ═══ -->
+<div id="hub" style="display:none">
+  <div>
+    <div class="hub-title">ARCADE</div>
+    <div class="hub-sub">// Terminal Games v3.0 — Choose Your Challenge</div>
+  </div>
+  <div style="text-align:center">
+    <span class="api-badge" onclick="changeApiKey()">⚡ OpenAI Connected <span style="color:var(--muted)">· change key</span></span>
+  </div>
+  <div class="game-cards">
+    <div class="game-card" onclick="showScreen('ttt')">
+      <span class="card-tag tag-ai">VS AI</span>
+      <span class="card-icon">✕ ○</span>
+      <div class="card-title">Tic Tac Toe</div>
+      <div class="card-desc">Classic 3×3 grid. Beat a minimax AI that plays perfectly on Hard mode.</div>
+    </div>
+    <div class="game-card" onclick="showScreen('snake')">
+      <span class="card-tag tag-arcade">ARCADE</span>
+      <span class="card-icon">🐍</span>
+      <div class="card-title">Snake</div>
+      <div class="card-desc">Eat, grow, survive. How long can you last before you eat yourself?</div>
+    </div>
+    <div class="game-card" onclick="showScreen('turing')">
+      <span class="card-tag tag-ai">AI POWERED</span>
+      <span class="card-icon">🤖</span>
+      <div class="card-title">Turing Test</div>
+      <div class="card-desc">Chat with a stranger. Is it a human or an AI in disguise? You decide.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TIC TAC TOE ═══ -->
+<div id="screen-ttt" class="screen">
+  <button class="back-btn" onclick="showHub()">◀ Back</button>
+  <div class="screen-title">TIC TAC TOE</div>
+  <div class="ttt-scoreboard">
+    <div class="score-box p"><span class="score-label">You [X]</span><span class="score-num" id="ttt-sp">0</span></div>
+    <span style="font-family:'Orbitron',sans-serif;color:var(--muted)">:</span>
+    <div class="score-box a"><span class="score-label">AI [O]</span><span class="score-num" id="ttt-sa">0</span></div>
+  </div>
+  <div class="diff-row">
+    <span class="diff-label">Level:</span>
+    <button class="diff-btn" onclick="tttSetDiff('easy')">Easy</button>
+    <button class="diff-btn active" onclick="tttSetDiff('medium')">Medium</button>
+    <button class="diff-btn" onclick="tttSetDiff('hard')">Hard</button>
+  </div>
+  <div class="ttt-status" id="ttt-status">YOUR TURN — PLACE X</div>
+  <div class="ttt-thinking" id="ttt-thinking"><span></span><span></span><span></span><span style="margin-left:6px;font-size:.65rem;color:var(--red)">AI THINKING</span></div>
+  <div class="ttt-board" id="ttt-board"></div>
+  <div class="game-btns">
+    <button class="gbtn" onclick="tttNewGame()">New Game</button>
+    <button class="gbtn danger" onclick="tttReset()">Reset Scores</button>
+  </div>
+</div>
+
+<!-- ═══ SNAKE ═══ -->
+<div id="screen-snake" class="screen">
+  <button class="back-btn" onclick="showHub()">◀ Back</button>
+  <div class="screen-title">SNAKE</div>
+  <div class="snake-info">
+    <div class="snake-stat"><div class="snake-stat-label">Score</div><div class="snake-stat-val" id="snake-score">0</div></div>
+    <div class="snake-stat"><div class="snake-stat-label">Best</div><div class="snake-stat-val" id="snake-best">0</div></div>
+    <div class="snake-stat"><div class="snake-stat-label">Level</div><div class="snake-stat-val" id="snake-level">1</div></div>
+  </div>
+  <div class="snake-status" id="snake-status" style="color:var(--cyan)">PRESS SPACE OR TAP TO START</div>
+  <canvas id="snake-canvas" width="360" height="360"></canvas>
+  <div class="snake-controls">Arrow Keys / WASD to move &nbsp;·&nbsp; Space to pause &nbsp;·&nbsp; Mobile: swipe</div>
+  <div style="display:grid;grid-template-columns:repeat(3,44px);gap:4px;margin-top:.5rem">
+    <div></div>
+    <button class="gbtn" style="padding:.4rem;font-size:1rem" onclick="snakeDir(0,-1)">▲</button>
+    <div></div>
+    <button class="gbtn" style="padding:.4rem;font-size:1rem" onclick="snakeDir(-1,0)">◀</button>
+    <button class="gbtn" style="padding:.4rem;font-size:.6rem" onclick="snakePause()">⏸</button>
+    <button class="gbtn" style="padding:.4rem;font-size:1rem" onclick="snakeDir(1,0)">▶</button>
+    <div></div>
+    <button class="gbtn" style="padding:.4rem;font-size:1rem" onclick="snakeDir(0,1)">▼</button>
+    <div></div>
+  </div>
+</div>
+
+<!-- ═══ TURING TEST ═══ -->
+<div id="screen-turing" class="screen">
+  <button class="back-btn" onclick="showHub()">◀ Back</button>
+  <div class="screen-title">TURING TEST</div>
+  <div class="turing-wrap">
+    <div class="turing-score">
+      <div class="turing-score-box"><div class="label">Correct</div><div class="val" id="tur-correct">0</div></div>
+      <div class="turing-score-box"><div class="label">Rounds</div><div class="val" id="tur-rounds">0</div></div>
+      <div class="turing-score-box"><div class="label">Accuracy</div><div class="val" id="tur-acc">—</div></div>
+    </div>
+    <div class="round-badge" id="tur-round-badge">ROUND 1 — CHAT WITH A STRANGER</div>
+    <div class="turing-desc">
+      You're chatting with someone online. After a few messages, decide: are they a <span style="color:var(--cyan)">HUMAN</span> or an <span style="color:var(--red)">AI</span> pretending to be one?
+    </div>
+    <div class="chat-window" id="tur-chat">
+      <div class="typing-indicator active" id="tur-typing"><span></span><span></span><span></span></div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="tur-input" placeholder="Type a message..." maxlength="200" onkeydown="if(event.key==='Enter')turSend()"/>
+      <button class="send-btn" id="tur-send" onclick="turSend()">SEND</button>
+    </div>
+    <div class="verdict-row">
+      <button class="verdict-btn human" id="tur-guess-human" onclick="turGuess('human')" disabled>👤 It's Human</button>
+      <button class="verdict-btn ai-v" id="tur-guess-ai" onclick="turGuess('ai')" disabled>🤖 It's AI</button>
+    </div>
+    <div class="turing-result" id="tur-result"></div>
+    <button class="gbtn" id="tur-next" onclick="turNextRound()" style="display:none;align-self:center">Next Round →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// PROXY CONNECTION CHECK
+// ═══════════════════════════════════════
+const PROXY_URL = 'https://summer-wood-8629.justus-rosiwal.workers.dev';
+
+async function checkProxy() {
+  const err = document.getElementById('setup-err');
+  err.style.color = 'var(--cyan)';
+  err.textContent = '⟳ Checking connection to local proxy...';
+  try {
+    // Send a minimal test request — if proxy is up it will forward and respond
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', max_tokens: 5,
+        messages: [{ role: 'user', content: 'hi' }]
+      })
+    });
+    const data = await res.json();
+    if (data.error && data.error.code === 'invalid_api_key') {
+      err.style.color = 'var(--red)';
+      err.textContent = '✗ Proxy is running but API key is invalid. Check the key you passed to server.js.';
+      return;
+    }
+    if (data.choices || data.error) {
+      // Proxy is reachable (even an openai error means the proxy works)
+      document.getElementById('api-setup').classList.add('hidden');
+      document.getElementById('hub').style.display = 'flex';
+    }
+  } catch(e) {
+    err.style.color = 'var(--red)';
+    err.textContent = '✗ Cannot reach proxy. Check your internet connection and try again.';
+  }
+}
+
+function changeApiKey() {
+  document.getElementById('api-setup').classList.remove('hidden');
+  document.getElementById('hub').style.display = 'none';
+  document.getElementById('setup-err').textContent = '';
+  showHub();
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+let activeSnakeLoop = null;
+
+function showScreen(id) {
+  document.getElementById('hub').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'ttt') tttNewGame();
+  if (id === 'snake') snakeInit();
+  if (id === 'turing') turInit();
+}
+
+function showHub() {
+  if (activeSnakeLoop) { clearInterval(activeSnakeLoop); activeSnakeLoop = null; }
+  document.getElementById('hub').style.display = 'flex';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+}
+
+// ═══════════════════════════════════════
+// TIC TAC TOE (pure JS — no API needed)
+// ═══════════════════════════════════════
+let tttBoard, tttOver, tttPlayerTurn, tttScores = {p:0,a:0}, tttDiff = 'medium';
+const TTT_WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function tttSetDiff(d) {
+  tttDiff = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === d));
+  tttNewGame();
+}
+
+function tttNewGame() {
+  tttBoard = Array(9).fill(null); tttOver = false; tttPlayerTurn = true;
+  tttSetStatus('YOUR TURN — PLACE X', '');
+  document.getElementById('ttt-thinking').classList.remove('active');
+  const el = document.getElementById('ttt-board'); el.innerHTML = '';
+  tttBoard.forEach((_, i) => {
+    const c = document.createElement('div'); c.className = 'ttt-cell'; c.dataset.i = i;
+    c.addEventListener('click', () => tttPlayerMove(i)); el.appendChild(c);
+  });
+}
+
+function tttReset() { tttScores={p:0,a:0}; tttUpdateScores(); tttNewGame(); }
+
+function tttPlayerMove(i) {
+  if (!tttPlayerTurn || tttOver || tttBoard[i]) return;
+  tttBoard[i]='X'; tttRenderCell(i,'X');
+  if (tttCheckGame()) return;
+  tttPlayerTurn = false;
+  document.getElementById('ttt-thinking').classList.add('active');
+  tttSetStatus('AI IS THINKING...','');
+  setTimeout(tttAiMove, 400 + Math.random()*300);
+}
+
+function tttAiMove() {
+  document.getElementById('ttt-thinking').classList.remove('active');
+  const move = tttGetMove();
+  if (move === null) return;
+  tttBoard[move]='O'; tttRenderCell(move,'O');
+  if (!tttCheckGame()) { tttPlayerTurn=true; tttSetStatus('YOUR TURN — PLACE X',''); }
+}
+
+function tttGetMove() {
+  const empty = tttBoard.map((v,i)=>v===null?i:null).filter(v=>v!==null);
+  if (!empty.length) return null;
+  if (tttDiff==='easy') {
+    if (Math.random()<.7) return empty[Math.floor(Math.random()*empty.length)];
+  }
+  if (tttDiff==='medium') {
+    const w=tttFindBest('O'); if(w!==null) return w;
+    const b=tttFindBest('X'); if(b!==null) return b;
+    if(tttBoard[4]===null) return 4;
+    return empty[Math.floor(Math.random()*empty.length)];
+  }
+  return tttMinimax(tttBoard,'O').index;
+}
+
+function tttFindBest(p) {
+  for(const c of TTT_WINS){const v=c.map(i=>tttBoard[i]),e=c.filter(i=>tttBoard[i]===null),f=v.filter(x=>x===p);if(f.length===2&&e.length===1)return e[0];}return null;
+}
+
+function tttMinimax(b, t) {
+  const w=tttGetWinner(b);
+  if(w==='O') return{score:10}; if(w==='X') return{score:-10};
+  const e=b.map((v,i)=>v===null?i:null).filter(v=>v!==null);
+  if(!e.length) return{score:0};
+  const moves=e.map(i=>{const nb=[...b];nb[i]=t;const r=tttMinimax(nb,t==='O'?'X':'O');return{index:i,score:r.score};});
+  return t==='O'?moves.reduce((a,b)=>b.score>a.score?b:a):moves.reduce((a,b)=>b.score<a.score?b:a);
+}
+
+function tttRenderCell(i, m) {
+  const c=document.querySelector(`.ttt-cell[data-i="${i}"]`);
+  c.textContent=m; c.classList.add(m.toLowerCase(),'taken');
+}
+
+function tttCheckGame() {
+  const w=tttGetWinner(tttBoard);
+  if(w){
+    tttOver=true;
+    const combo=TTT_WINS.find(c=>c.every(i=>tttBoard[i]===w));
+    combo.forEach(i=>document.querySelector(`.ttt-cell[data-i="${i}"]`).classList.add('winning'));
+    if(w==='X'){tttScores.p++;tttSetStatus('▶ YOU WIN! SYSTEM BREACHED','win');}
+    else{tttScores.a++;tttSetStatus('▶ AI WINS. BETTER LUCK NEXT TIME','lose');}
+    tttUpdateScores(); return true;
+  }
+  if(tttBoard.every(v=>v!==null)){tttOver=true;tttSetStatus('▶ DRAW — STALEMATE','draw');return true;}
+  return false;
+}
+
+function tttGetWinner(b){for(const[a,c,d]of TTT_WINS){if(b[a]&&b[a]===b[c]&&b[c]===b[d])return b[a];}return null;}
+function tttSetStatus(msg,type){const e=document.getElementById('ttt-status');e.textContent=msg;e.className='ttt-status '+type;}
+function tttUpdateScores(){document.getElementById('ttt-sp').textContent=tttScores.p;document.getElementById('ttt-sa').textContent=tttScores.a;}
+
+// ═══════════════════════════════════════
+// SNAKE (pure JS — no API needed)
+// ═══════════════════════════════════════
+const CELL = 18, COLS = 20, ROWS = 20;
+let snake, dir, nextDir, food, snakeRunning, snakePaused, snakeScoreVal, snakeBest=0, snakeLvl;
+let touchStartX, touchStartY;
+
+function snakeInit() {
+  const canvas = document.getElementById('snake-canvas');
+  canvas.width = COLS * CELL; canvas.height = ROWS * CELL;
+  snakeReset(false);
+  snakeDraw();
+  document.getElementById('snake-status').textContent = 'PRESS SPACE OR TAP TO START';
+}
+
+function snakeReset(autoStart) {
+  snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+  dir = {x:1,y:0}; nextDir = {x:1,y:0};
+  snakeScoreVal=0; snakeLvl=1; snakeRunning=false; snakePaused=false;
+  snakePlaceFood();
+  document.getElementById('snake-score').textContent='0';
+  document.getElementById('snake-level').textContent='1';
+  if(autoStart) snakeStart();
+}
+
+function snakeStart() {
+  if(activeSnakeLoop) clearInterval(activeSnakeLoop);
+  snakeRunning=true; snakePaused=false;
+  document.getElementById('snake-status').textContent='';
+  activeSnakeLoop = setInterval(snakeTick, Math.max(60, 150 - (snakeLvl-1)*10));
+}
+
+function snakePause() {
+  if(!snakeRunning) return;
+  snakePaused=!snakePaused;
+  document.getElementById('snake-status').textContent = snakePaused ? 'PAUSED' : '';
+}
+
+function snakeTick() {
+  if(snakePaused) return;
+  dir = nextDir;
+  const head = {x: snake[0].x+dir.x, y: snake[0].y+dir.y};
+  if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS||snake.some(s=>s.x===head.x&&s.y===head.y)){
+    snakeGameOver(); return;
+  }
+  snake.unshift(head);
+  if(head.x===food.x&&head.y===food.y){
+    snakeScoreVal+=10*snakeLvl;
+    document.getElementById('snake-score').textContent=snakeScoreVal;
+    if(snakeBest<snakeScoreVal){snakeBest=snakeScoreVal;document.getElementById('snake-best').textContent=snakeBest;}
+    snakePlaceFood();
+    if(snakeScoreVal%(50*snakeLvl)===0){
+      snakeLvl++; document.getElementById('snake-level').textContent=snakeLvl;
+      clearInterval(activeSnakeLoop);
+      activeSnakeLoop=setInterval(snakeTick,Math.max(60,150-(snakeLvl-1)*10));
+    }
+  } else { snake.pop(); }
+  snakeDraw();
+}
+
+function snakeGameOver() {
+  clearInterval(activeSnakeLoop); activeSnakeLoop=null; snakeRunning=false;
+  document.getElementById('snake-status').textContent=`GAME OVER — SCORE: ${snakeScoreVal} — SPACE TO RESTART`;
+  snakeDraw(true);
+}
+
+function snakePlaceFood() {
+  let pos; do{pos={x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)};}
+  while(snake.some(s=>s.x===pos.x&&s.y===pos.y)); food=pos;
+}
+
+function snakeDir(dx, dy) {
+  if(!snakeRunning){snakeReset(true);return;}
+  if(dx===1&&dir.x===-1||dx===-1&&dir.x===1)return;
+  if(dy===1&&dir.y===-1||dy===-1&&dir.y===1)return;
+  nextDir={x:dx,y:dy};
+}
+
+function snakeDraw(dead=false) {
+  const canvas=document.getElementById('snake-canvas');
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0a1a12'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='#0f2018'; ctx.lineWidth=.5;
+  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,canvas.height);ctx.stroke();}
+  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(canvas.width,y*CELL);ctx.stroke();}
+  ctx.fillStyle=dead?'#555':'#ff3355';
+  ctx.shadowColor='#ff3355'; ctx.shadowBlur=dead?0:12;
+  ctx.fillRect(food.x*CELL+2,food.y*CELL+2,CELL-4,CELL-4);
+  ctx.shadowBlur=0;
+  snake.forEach((s,i)=>{
+    const t=1-i/snake.length;
+    ctx.fillStyle=dead?'#1a3a2a':`rgba(0,${Math.floor(180+75*t)},${Math.floor(100*t)},1)`;
+    ctx.shadowColor=dead?'transparent':'#00ff88'; ctx.shadowBlur=dead?0:i===0?16:4;
+    ctx.fillRect(s.x*CELL+1,s.y*CELL+1,CELL-2,CELL-2);
+  });
+  ctx.shadowBlur=0;
+  if(!dead&&snake.length>0){
+    const h=snake[0]; ctx.fillStyle='#080c10';
+    const ex=dir.x===1?CELL-5:dir.x===-1?2:dir.y===0?CELL/2-4:CELL/2-4;
+    const ey=dir.y===1?CELL-5:dir.y===-1?2:4;
+    ctx.fillRect(h.x*CELL+ex,h.y*CELL+ey,3,3);
+    ctx.fillRect(h.x*CELL+ex+(dir.y!==0?8:0),h.y*CELL+ey+(dir.x!==0?8:0),3,3);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  const s = document.getElementById('screen-snake');
+  if(!s.classList.contains('active')) return;
+  if(e.key===' '||e.code==='Space'){e.preventDefault();if(!snakeRunning){snakeReset(true);}else{snakePause();}}
+  if(e.key==='ArrowUp'||e.key==='w'||e.key==='W') snakeDir(0,-1);
+  if(e.key==='ArrowDown'||e.key==='s'||e.key==='S') snakeDir(0,1);
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') snakeDir(-1,0);
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') snakeDir(1,0);
+});
+
+document.getElementById('snake-canvas').addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY;e.preventDefault();},{passive:false});
+document.getElementById('snake-canvas').addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-touchStartX, dy=e.changedTouches[0].clientY-touchStartY;
+  if(!snakeRunning){snakeReset(true);return;}
+  if(Math.abs(dx)>Math.abs(dy)){snakeDir(dx>0?1:-1,0);}else{snakeDir(0,dy>0?1:-1);}
+  e.preventDefault();
+},{passive:false});
+
+// ═══════════════════════════════════════
+// TURING TEST — OpenAI API
+// ═══════════════════════════════════════
+let turHistory=[], turIsAI=true, turRound=1, turCorrect=0, turAnswered=false, turMsgCount=0;
+
+const TUR_SYSTEM_HUMAN = `You are playing the role of a random person chatting online. Blend in as human. Rules:
+- Read the FULL conversation history and respond directly to what was just said
+- Be casual: use contractions, "lol", "haha", "ngl", "tbh", typos occasionally
+- Have opinions, moods, a personality — be slightly sarcastic or funny sometimes
+- Ask follow-up questions naturally, like a real person would
+- Reference earlier parts of the conversation when relevant
+- NEVER say you're an AI, never use formal language, never be overly helpful
+- Keep replies SHORT: 1-3 sentences max`;
+
+const TUR_SYSTEM_AI = `You are an AI pretending to be human, but you're not very good at it. Rules:
+- Read the FULL conversation history and respond to what was just said — but in a slightly stilted way
+- Use slightly too-perfect grammar and punctuation
+- Be overly agreeable and positive ("That's really interesting!", "I completely understand!")
+- Occasionally use oddly formal phrases mixed with attempts at casual talk
+- Sometimes reference "processing" a thought or "considering" options
+- Be a little too eager to please
+- Keep replies SHORT: 1-3 sentences max`;
+
+async function turInit() {
+  turHistory=[]; turAnswered=false; turMsgCount=0;
+  document.getElementById('tur-chat').innerHTML='<div class="typing-indicator active" id="tur-typing"><span></span><span></span><span></span></div>';
+  document.getElementById('tur-input').value='';
+  document.getElementById('tur-result').textContent='';
+  document.getElementById('tur-next').style.display='none';
+  document.getElementById('tur-send').disabled=true;
+  document.getElementById('tur-input').disabled=true;
+  document.getElementById('tur-guess-human').disabled=true;
+  document.getElementById('tur-guess-ai').disabled=true;
+
+  turIsAI = Math.random() > 0.5;
+  document.getElementById('tur-round-badge').textContent=`ROUND ${turRound} — CHAT WITH A STRANGER`;
+
+  // Seed opener: use a single user turn to prompt the first message
+  const openerMessages = [
+    { role: 'user', content: '[You just connected to a stranger in a chat app. Send your very first opening message — keep it short and natural.]' }
+  ];
+  const opener = await turCallAPI(openerMessages);
+
+  // Store in history as a proper back-and-forth so future calls have context
+  turHistory.push({ role: 'user', content: '[You just connected to a stranger. Send your opening message.]' });
+  turHistory.push({ role: 'assistant', content: opener });
+
+  document.getElementById('tur-chat').innerHTML='';
+  turAppendMsg(opener,'them');
+  document.getElementById('tur-send').disabled=false;
+  document.getElementById('tur-input').disabled=false;
+}
+
+async function turSend() {
+  const input=document.getElementById('tur-input');
+  const msg=input.value.trim(); if(!msg||turAnswered) return;
+  input.value='';
+  turMsgCount++;
+  turAppendMsg(msg,'me');
+  turHistory.push({ role: 'user', content: msg });
+  document.getElementById('tur-send').disabled=true;
+  document.getElementById('tur-input').disabled=true;
+  showTyping(true);
+  const reply = await turCallAPI(turHistory);
+  showTyping(false);
+  turHistory.push({ role: 'assistant', content: reply });
+  turAppendMsg(reply,'them');
+  document.getElementById('tur-send').disabled=false;
+  document.getElementById('tur-input').disabled=false;
+  document.getElementById('tur-input').focus();
+  if(turMsgCount>=2){
+    document.getElementById('tur-guess-human').disabled=false;
+    document.getElementById('tur-guess-ai').disabled=false;
+  }
+}
+
+// ── OpenAI call via local proxy ──
+// Proxy at localhost:3001/chat forwards to api.openai.com with your key
+async function turCallAPI(messages) {
+  const systemPrompt = turIsAI ? TUR_SYSTEM_HUMAN : TUR_SYSTEM_AI;
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        max_tokens: 120,
+        temperature: 0.9,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages
+        ]
+      })
+    });
+    const data = await res.json();
+    if (data.error) {
+      console.error('OpenAI error:', data.error);
+      return 'sorry got distracted lol, what were you saying?';
+    }
+    return data.choices?.[0]?.message?.content?.trim() || '...';
+  } catch(e) {
+    console.error('Fetch error:', e);
+    return '[proxy not reachable — is server.js still running?]';
+  }
+}
+
+function turGuess(guess) {
+  if(turAnswered) return;
+  turAnswered=true;
+  turRound++;
+  document.getElementById('tur-rounds').textContent=turRound-1;
+  document.getElementById('tur-guess-human').disabled=true;
+  document.getElementById('tur-guess-ai').disabled=true;
+  document.getElementById('tur-send').disabled=true;
+  document.getElementById('tur-input').disabled=true;
+
+  const correct = (guess==='ai')===turIsAI;
+  if(correct) turCorrect++;
+  document.getElementById('tur-correct').textContent=turCorrect;
+  const acc=Math.round((turCorrect/(turRound-1))*100);
+  document.getElementById('tur-acc').textContent=acc+'%';
+
+  const r=document.getElementById('tur-result');
+  if(correct){
+    r.style.color='var(--green)';
+    r.textContent=`✓ CORRECT! It was ${turIsAI?'an AI':'a human (AI acting obvious)'}. You spotted it!`;
+  } else {
+    r.style.color='var(--red)';
+    r.textContent=`✗ WRONG! It was actually ${turIsAI?'an AI':'a human (AI acting obvious)'}. Fooled!`;
+  }
+  document.getElementById('tur-next').style.display='block';
+}
+
+function turNextRound() {
+  document.getElementById('tur-next').style.display='none';
+  document.getElementById('tur-result').textContent='';
+  turHistory=[];
+  turInit();
+}
+
+function turAppendMsg(text, side) {
+  const chat=document.getElementById('tur-chat');
+  const div=document.createElement('div');
+  div.className=`chat-msg ${side}`;
+  div.innerHTML=`<div class="msg-label">${side==='me'?'YOU':'STRANGER'}</div>${escHtml(text)}`;
+  chat.appendChild(div);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function showTyping(show) {
+  const chat=document.getElementById('tur-chat');
+  let t=document.getElementById('tur-typing-live');
+  if(show){
+    if(!t){t=document.createElement('div');t.id='tur-typing-live';t.className='typing-indicator active';t.innerHTML='<span></span><span></span><span></span>';chat.appendChild(t);}
+    chat.scrollTop=chat.scrollHeight;
+  } else { if(t) t.remove(); }
+}
+
+function escHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
