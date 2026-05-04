@@ -646,9 +646,9 @@ async function turCallAPI(messages) {
     });
     const data = await res.json();
     if (data.error) {
-      console.error('OpenAI error:', data.error);
-      return 'sorry got distracted lol, what were you saying?';
-    }
+  console.error('OpenAI error:', data.error);
+  return `Error: ${data.error.message}`;
+}
     return data.choices?.[0]?.message?.content?.trim() || '...';
   } catch(e) {
     console.error('Fetch error:', e);
