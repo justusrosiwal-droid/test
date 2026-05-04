@@ -710,5 +710,24 @@ function showTyping(show) {
 
 function escHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 </script>
+  <script>
+  async function sendMessage() {
+    const res = await fetch("https://YOUR-WORKER-URL", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "user", content: "Hello" }
+        ]
+      })
+    });
+
+    const data = await res.json();
+    console.log(data);
+  }
+</script>
 </body>
 </html>
