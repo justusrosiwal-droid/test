@@ -382,6 +382,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 // ═══════════════════════════════════════
 // PASSWORD PROTECTION (SECURE - WORKER BASED)
 // ═══════════════════════════════════════
+const PROXY_URL = 'https://summer-wood-8629.justus-rosiwal.workers.dev';
 
 let pwEntry = '';
 
@@ -456,7 +457,6 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════
 // PROXY CONNECTION CHECK
 // ═══════════════════════════════════════
-const PROXY_URL = 'https://summer-wood-8629.justus-rosiwal.workers.dev';
 
 async function checkProxy() {
   const err = document.getElementById('setup-err');
