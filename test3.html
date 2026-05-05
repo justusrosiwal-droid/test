@@ -432,7 +432,7 @@ function pwPress(digit) {
 // ═══════════════════════════════════════
 
 let currentUser = null;   // { username, token, stats }
-const ADMIN_USERNAME = 'admin'; // change this to your username
+
 
 // Server status check on load
 async function checkWorkerStatus() {
@@ -503,7 +503,10 @@ async function doRegister() {
     authSuccess(data);
   } catch { err.style.color = 'var(--red)'; err.textContent = '✗ Could not reach server'; }
 }
-
+function authSuccess(data) {
+  currentUser = { username: data.username, token: data.token, stats: data.stats || {}, isAdmin: data.isAdmin || false };
+  ...
+}
 function authSuccess(data) {
   currentUser = { username: data.username, token: data.token, stats: data.stats || {} };
   localStorage.setItem('arcade_token', data.token);
@@ -585,7 +588,7 @@ function showProfile() {
     </div>`;
   // Show admin link if this is the admin account
   document.getElementById('admin-link-row').style.display =
-    currentUser?.username?.toLowerCase() === ADMIN_USERNAME ? 'block' : 'none';
+    currentUser?.isAdmin ? 'block' : 'none';
   document.getElementById('profile-modal').style.display = 'flex';
 }
 function closeProfile() { document.getElementById('profile-modal').style.display = 'none'; }
