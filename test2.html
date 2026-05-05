@@ -222,6 +222,10 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
     </div>
     <div class="pw-err" id="pw-err"></div>
     <div class="pw-hint">🔒 Enter the 4-digit PIN to continue</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:.6rem">
+  <div id="pw-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);transition:all .3s"></div>
+  <span id="pw-status-txt" style="font-size:.6rem;letter-spacing:.12em;color:var(--muted)">CHECKING...</span>
+</div>
   </div>
 </div>
 
@@ -392,6 +396,30 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 
 
 let pwEntry = '';
+  // Check worker connection on page load
+async function checkWorkerStatus() {
+  const dot = document.getElementById('pw-status-dot');
+  const txt = document.getElementById('pw-status-txt');
+  try {
+    const res = await fetch(PROXY_URL + '/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: '0000' })
+    });
+    if (res.ok) {
+      dot.style.background = 'var(--green)';
+      dot.style.boxShadow = '0 0 6px var(--green)';
+      txt.textContent = 'SERVER ONLINE';
+      txt.style.color = 'var(--green)';
+    }
+  } catch {
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow = '0 0 6px var(--red)';
+    txt.textContent = 'SERVER OFFLINE';
+    txt.style.color = 'var(--red)';
+  }
+}
+checkWorkerStatus();
 
 function pwPress(digit) {
   if (pwEntry.length >= 4) return;
@@ -1090,7 +1118,7 @@ async function turSend() {
   showTyping(true);
   const reply = await turCallAPI(turHistory);
   // Typing delay proportional to reply length — feels more realistic
-  const delay = Math.min(400 + reply.length * 28, 3800);
+  const delay = Math.min(500 + reply.length * 45, 6000);
   await new Promise(r => setTimeout(r, delay));
   showTyping(false);
   turHistory.push({ role: 'assistant', content: reply });
