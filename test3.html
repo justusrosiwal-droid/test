@@ -503,12 +503,9 @@ async function doRegister() {
     authSuccess(data);
   } catch { err.style.color = 'var(--red)'; err.textContent = '✗ Could not reach server'; }
 }
+
 function authSuccess(data) {
   currentUser = { username: data.username, token: data.token, stats: data.stats || {}, isAdmin: data.isAdmin || false };
-  ...
-}
-function authSuccess(data) {
-  currentUser = { username: data.username, token: data.token, stats: data.stats || {} };
   localStorage.setItem('arcade_token', data.token);
   localStorage.setItem('arcade_username', data.username);
   document.getElementById('pw-screen').classList.add('hidden');
