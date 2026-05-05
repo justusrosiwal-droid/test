@@ -380,9 +380,9 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 
 <script>
 // ═══════════════════════════════════════
-// PASSWORD PROTECTION
+// PASSWORD PROTECTION (SECURE - WORKER BASED)
 // ═══════════════════════════════════════
-const PASSWORD = '1234'; // ← Change this PIN
+
 let pwEntry = '';
 
 function pwPress(digit) {
@@ -408,17 +408,39 @@ function updateDots(wrong = false) {
   }
 }
 
-function checkPassword() {
-  if (pwEntry === PASSWORD) {
-    document.getElementById('pw-screen').classList.add('hidden');
-    document.getElementById('api-setup').classList.remove('hidden');
-  } else {
+// 🔐 NOW VERIFIED BY WORKER (NOT FRONTEND)
+async function checkPassword() {
+  const errEl = document.getElementById('pw-err');
+
+  try {
+    const res = await fetch(PROXY_URL + '/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pwEntry })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById('pw-screen').classList.add('hidden');
+      document.getElementById('api-setup').classList.remove('hidden');
+    } else {
+      throw new Error('Invalid PIN');
+    }
+
+  } catch (e) {
     updateDots(true);
-    document.getElementById('pw-err').textContent = '✗ INCORRECT CODE';
+    errEl.textContent = '✗ INCORRECT CODE';
+
     const box = document.getElementById('pw-box');
     box.style.animation = 'none'; box.offsetHeight;
     box.style.animation = 'pwShake .4s ease';
-    setTimeout(() => { pwEntry = ''; updateDots(); document.getElementById('pw-err').textContent = ''; }, 900);
+
+    setTimeout(() => {
+      pwEntry = '';
+      updateDots();
+      errEl.textContent = '';
+    }, 900);
   }
 }
 
@@ -429,6 +451,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Backspace') pwDel();
   }
 });
+</script>
 
 // ═══════════════════════════════════════
 // PROXY CONNECTION CHECK
