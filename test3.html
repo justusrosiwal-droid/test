@@ -537,7 +537,7 @@ async function tryAutoLogin() {
     });
     const data = await res.json();
     if (data.success) {
-      authSuccess({ username: data.username, token, stats: data.stats });
+      authSuccess({ username: data.username, token, stats: data.stats, isAdmin: data.isAdmin  });
     } else {
       localStorage.removeItem('arcade_token');
     }
